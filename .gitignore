@@ -45,3 +45,5 @@ example
 # local env files
 .env
 .env*.local
+.gstack/
+supabase/.temp/

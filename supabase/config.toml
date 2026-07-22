@@ -1,0 +1,17 @@
+project_id = "stackd-app"
+
+# revenuecat-webhook is called by RevenueCat's servers, not by a signed-in
+# app user or the daily cron -- it has no Supabase JWT to present, so the
+# platform's default verify_jwt gate (which every other function in this
+# project relies on/relies on service_role for) must be off here. Auth is
+# instead a custom shared-secret check inside the function itself
+# (REVENUECAT_WEBHOOK_SECRET, checked against the Authorization header) --
+# see supabase/functions/revenuecat-webhook/index.ts. Re-deploying this
+# function without `--no-verify-jwt` would silently re-enable the platform
+# gate and break real RevenueCat webhook delivery (discovered during this
+# section's live verification -- a hand-built webhook call was rejected
+# with UNAUTHORIZED_INVALID_JWT_FORMAT before the function's own auth check
+# ever ran).
+[functions.revenuecat-webhook]
+verify_jwt = false
+

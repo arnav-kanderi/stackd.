@@ -1,62 +1,137 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
+import { EmptyState, SignInGate } from '@/components/empty-state';
+import { OpportunityCard } from '@/components/opportunity-card';
+import { PaywallModal } from '@/components/paywall-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, Spacing } from '@/constants/theme';
+import { useProfile } from '@/hooks/use-profile';
+import { stackOpportunity } from '@/lib/stack-actions';
+import { supabase } from '@/lib/supabase';
+import type { Opportunity } from '@/lib/types';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
+/**
+ * Vertical, full-screen, TikTok-style feed (spec §2.2). One opportunity per
+ * screen, snap-scroll. Auto-removal of past-deadline opportunities happens
+ * server-side (daily Edge Function flips is_active=false) — this screen
+ * just filters on is_active = true.
+ */
+export default function FeedScreen() {
+  const { height } = useWindowDimensions();
+  const cardHeight = height - BottomTabInset;
+  const { profile, userId } = useProfile();
+
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [stackedIds, setStackedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [stackingId, setStackingId] = useState<string | null>(null);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+
+  const loadFeed = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('opportunities')
+      .select('*')
+      .eq('is_active', true)
+      .order('deadline', { ascending: true });
+    setOpportunities((data as Opportunity[]) ?? []);
+    setLoading(false);
+  }, []);
+
+  const loadStacked = useCallback(async () => {
+    if (!userId) {
+      setStackedIds(new Set());
+      return;
+    }
+    const { data } = await supabase.from('stack_items').select('opportunity_id').eq('user_id', userId);
+    setStackedIds(new Set((data ?? []).map((r) => r.opportunity_id as string)));
+  }, [userId]);
+
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed]);
+
+  useEffect(() => {
+    loadStacked();
+  }, [loadStacked]);
+
+  async function handleStackIt(opportunity: Opportunity) {
+    if (!userId) return;
+    setStackingId(opportunity.id);
+    const { error, paywalled } = await stackOpportunity(userId, opportunity, profile);
+    setStackingId(null);
+    if (paywalled) {
+      // spec §3.1: 11th "Stack It" attempt on free tier -- paywall modal
+      // instead of saving. No match-scoring/storage call happened for this
+      // opportunity (stackOpportunity's RPC rejects before any insert).
+      setPaywallVisible(true);
+      return;
+    }
+    if (!error) {
+      setStackedIds((prev) => new Set(prev).add(opportunity.id));
+    }
   }
-  if (Device.isDevice) {
+
+  if (!userId) {
+    // Defensive fallback only -- the root layout (src/app/_layout.tsx) gates
+    // unauthenticated users to AuthScreen before this screen ever mounts, so
+    // this should be unreachable in normal navigation.
+    return <SignInGate label="Sign in to see your feed" />;
+  }
+
+  if (loading && opportunities.length === 0) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <ThemedView style={styles.center}>
+        <SafeAreaView style={styles.center}>
+          <ActivityIndicator size="large" />
+          <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
+            Finding opportunities for you…
+          </ThemedText>
+        </SafeAreaView>
+      </ThemedView>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
 
-export default function HomeScreen() {
+  if (!loading && opportunities.length === 0) {
+    return (
+      <ThemedView style={styles.center}>
+        <SafeAreaView style={styles.center}>
+          <ThemedText type="subtitle" style={styles.centerText}>
+            No active opportunities right now
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
+            Check back soon — new opportunities are added regularly.
+          </ThemedText>
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+      <FlatList
+        data={opportunities}
+        keyExtractor={(item) => item.id}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        snapToInterval={cardHeight}
+        decelerationRate="fast"
+        getItemLayout={(_, index) => ({ length: cardHeight, offset: cardHeight * index, index })}
+        renderItem={({ item }) => (
+          <OpportunityCard
+            opportunity={item}
+            profile={profile}
+            isStacked={stackedIds.has(item.id)}
+            onStackIt={() => handleStackIt(item)}
+            cardHeight={cardHeight}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
+        )}
+        extraData={[stackedIds, stackingId]}
+      />
+      <PaywallModal visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
     </ThemedView>
   );
 }
@@ -64,35 +139,18 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
-  safeArea: {
+  center: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.five,
   },
-  title: {
+  centerText: {
     textAlign: 'center',
   },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  link: {
+    marginTop: Spacing.two,
   },
 });

@@ -1,16 +1,26 @@
 {
   "expo": {
-    "name": "stackd-app",
+    "name": "stackd.",
     "slug": "stackd-app",
     "version": "1.0.0",
+    "description": "stackd. matches students to a personalized feed of internships, scholarships, and other extracurriculars, and helps them track applications from find to submit.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "stackdapp",
     "userInterfaceStyle": "automatic",
+    "primaryColor": "#208AEF",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.stackd.app",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.stackd.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -31,6 +41,12 @@
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#208AEF"
         }
       ]
     ],
