@@ -1,56 +1,50 @@
-# Welcome to your Expo app 👋
+# Stackd
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**One place for students to find opportunities, save them, and track their applications.**
 
-## Get started
+Students hear about summer programs, scholarships, competitions, and internships from a dozen places: school announcements, group chats, club officers, and random websites. Stackd brings them into one feed. You save what you want to apply to into your personal **Stack** and track each application from *interested* to *submitted* to *decided*.
 
-1. Install dependencies
+🏆 Won a **$1,000 startup competition award**.
 
-   ```bash
-   npm install
-   ```
+> **Status:** early prototype. This repo holds the app scaffold (Expo Router + Supabase client). The opportunity feed, Stack, and application tracker are being built here next. See the [roadmap](#roadmap).
 
-2. Start the app
+## Planned features
 
-   ```bash
-   npx expo start
-   ```
+- **Discover:** browse and filter opportunities by type, deadline, grade level, cost, and location
+- **Stack:** save opportunities to a personal list
+- **Track:** move each application through stages, with deadline reminders
+- **Shared catalog:** opportunity data lives in Supabase, so every user sees the same up-to-date listings
 
-In the output, you'll find options to open the app in a
+## Tech stack
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+| Layer | Choice |
+|---|---|
+| App | React Native + Expo (SDK 57), TypeScript |
+| Navigation | Expo Router (file-based routing) |
+| Backend / data | Supabase (Postgres, auth) |
+| Platforms | iOS, Android, web from one codebase |
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+npm install
+# create .env with your Supabase URL and anon key (see below)
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then open it in Expo Go, an iOS simulator, an Android emulator, or the browser (`w`).
 
-### Other setup steps
+Supabase keys go in `.env` as `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`. Never commit `.env`.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Roadmap
 
-## Learn more
+- [x] Project scaffold: Expo Router, TypeScript, Supabase client
+- [ ] Supabase schema: `opportunities`, `stacks`, `applications`, with row-level security
+- [ ] Discover feed with search and filters
+- [ ] Save to Stack and track application stages
+- [ ] Deadline push notifications
+- [ ] Pilot with students at Marvin Ridge High School, then publish on TestFlight
 
-To learn more about developing your project with Expo, look at the following resources:
+## Author
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Built by [Arnav Kanderi](https://arnavkanderi.com).
